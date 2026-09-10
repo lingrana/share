@@ -622,7 +622,7 @@
                                             <input type="hidden" name="node_id" value="{{.ID}}">
                                             <button type="submit" class="mono-btn mono-btn-sm">{{if .Enabled}}停用{{else}}启用{{end}}</button>
                                         </form>
-                                        <a class="mono-btn mono-btn-sm" href="/admin?gw_edit={{.ID}}#gateway">编辑</a>
+                                        <button type="button" class="mono-btn mono-btn-sm" data-node-id="{{.ID}}" data-node-name="{{.Name}}" data-node-base-url="{{.BaseURL}}" data-node-token="{{.Token}}" data-node-anti-bot="{{if .AntiBot}}1{{else}}0{{end}}" onclick="openNodeEditModal(this)">编辑</button>
                                         <form method="post" style="display:inline;margin:0" onsubmit="return confirm('确定删除该节点吗？其上的既有文件将不再被索引。')">
                                             <input type="hidden" name="action" value="gw_delete_node">
                                             <input type="hidden" name="csrf" value="{{$csrf}}">
@@ -748,6 +748,24 @@
                 {{if eq .DBDriver "postgres"}}连接：{{.DBHost}}:{{.DBPort}}/{{.DBName}}{{else}}文件：data/share.sqlite（WAL）{{end}}<br>
                 切换数据库需修改 data/config.json 的 db 键或删除后重装；本面板不提供在线切换。
             </p>
+        </div>
+    </div>
+
+    <!-- 模态框: 编辑存储节点 -->
+    <div class="modal-overlay" id="nodeEditModal">
+        <div class="modal-sheet" style="max-width:720px">
+            <button type="button" class="modal-close-x" onclick="closeModal()">✕</button>
+            <h3 class="modal-title">✏️ 编辑存储节点</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="gw_save_node">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <input type="hidden" name="node_id" id="editNodeId">
+                <div class="mono-form-group"><label class="mono-form-label">节点名称 *</label><input type="text" name="node_name" id="editNodeName" class="mono-input" required></div>
+                <div class="mono-form-group"><label class="mono-form-label">节点地址 (origin) *</label><input type="text" name="node_base_url" id="editNodeBaseUrl" class="mono-input" required></div>
+                <div class="mono-form-group"><label class="mono-form-label">Token *</label><input type="text" name="node_token" id="editNodeToken" class="mono-input" required></div>
+                <label style="display:flex;gap:0.5rem;align-items:center"><input type="checkbox" name="node_anti_bot" id="editNodeAntiBot" value="1">该主机带反爬 JS 质询</label>
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem"><button type="button" class="mono-btn" onclick="closeModal()">取消</button><button type="submit" class="mono-btn mono-btn-filled">保存节点</button></div>
+            </form>
         </div>
     </div>
 

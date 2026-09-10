@@ -16,6 +16,7 @@ share.exe
 # Go 工作区
 /go.work
 /go.work.sum
+.gocache/
 
 # IDE
 .vscode/

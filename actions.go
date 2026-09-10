@@ -687,6 +687,9 @@ func actionUpdateSiteContent(w http.ResponseWriter, r *http.Request) {
 		}
 		name := strings.TrimSpace(socialNames[i])
 		linkURL := strings.TrimSpace(socialUrls[i])
+		if linkURL != "" && !strings.Contains(linkURL, "://") {
+			linkURL = "https://" + linkURL
+		}
 		// 仅接受 http/https 外链，杜绝 javascript: 等伪协议入库
 		if name != "" && linkURL != "" && validExternalUrl(linkURL) {
 			socialLinks = append(socialLinks, socialLink{Name: name, URL: linkURL})
@@ -705,7 +708,7 @@ func actionUpdateSiteContent(w http.ResponseWriter, r *http.Request) {
 
 	saveSiteSettings(settings)
 	setFlash(s, "站点设置已更新。", "success")
-	redirect(w, "/admin")
+	redirect(w, "/admin#settings")
 }
 
 // ==================== 管理员动作：前台主题 ====================

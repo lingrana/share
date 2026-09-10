@@ -80,6 +80,15 @@
         document.body.style.overflow = '';
     };
 
+    window.openNodeEditModal = function(btn) {
+        document.getElementById('editNodeId').value = btn.dataset.nodeId || '';
+        document.getElementById('editNodeName').value = btn.dataset.nodeName || '';
+        document.getElementById('editNodeBaseUrl').value = btn.dataset.nodeBaseUrl || '';
+        document.getElementById('editNodeToken').value = btn.dataset.nodeToken || '';
+        document.getElementById('editNodeAntiBot').checked = btn.dataset.nodeAntiBot === '1';
+        openModal('nodeEditModal');
+    };
+
     document.querySelectorAll('.modal-overlay').forEach(modal => {
         modal.addEventListener('click', (e) => {
             if (e.target !== modal) return;

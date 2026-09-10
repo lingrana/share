@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,7 +27,7 @@ type idempotencyEntry struct {
 }
 
 var (
-	idempotencyMu sync.Mutex
+	idempotencyMu    sync.Mutex
 	idempotencyStore = map[string]*idempotencyEntry{}
 )
 
@@ -394,6 +395,21 @@ func gwOpenSource(file *multipartFileInfo) (io.ReadSeeker, io.Closer, error) {
 }
 
 // ==================== 删除清理（resources.go 调用） ====================
+
+// storageDeleteURL 精确删除资源表中记录的网关文件，兼容旧版随机 key。
+func storageDeleteURL(rawURL string) {
+	u, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil || !strings.HasPrefix(u.Path, "/content/") {
+		return
+	}
+	key, err := url.PathUnescape(strings.TrimPrefix(u.Path, "/content/"))
+	if err != nil || !gwKeyIsValid(key) {
+		return
+	}
+	if row := gwGetByKey(key); row != nil {
+		_, _ = gwDeleteRow(row, false)
+	}
+}
 
 // storageDeleteForBase 网关侧按 m<id>. / c<id>. 前缀清理；失败不阻塞主站删除。
 func storageDeleteForBase(kind, base string) {

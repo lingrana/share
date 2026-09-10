@@ -236,13 +236,18 @@ func updateResource(id int64, data map[string]any) {
 }
 
 func deleteResource(id int) {
+	resource := getResourceById(id)
 	for _, share := range dbFetchAll("SELECT token FROM shares WHERE resource_id = ?", id) {
 		clearPublicPageCache("share:" + str(share, "token"))
 	}
 	dbDelete("resource_links", "resource_id = ?", id)
 	dbDelete("shares", "resource_id = ?", id)
-	dbDelete("resources", "id = ?", id)
+	if resource != nil {
+		storageDeleteURL(str(resource, "cover_url"))
+		storageDeleteURL(str(resource, "media_url"))
+	}
 	deleteResourceFiles(id)
+	dbDelete("resources", "id = ?", id)
 }
 
 // deleteResourceFiles：网关侧按 m<id>. 前缀清理；c<id>. 仅清理历史残留。失败不阻塞删除。
