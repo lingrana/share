@@ -16,16 +16,16 @@ func recordVisit(ip, kind string) {
 		shareIncr = 1
 	}
 
-	// UPSERT 原子计数，避免竞态丢计数
+	// UPSERT 原子计数，避免竞态丢计数；PG 要求列名用表名限定避免歧义
 	dbExecute(
 		"INSERT INTO visitor_stats (stat_date, visits, shares, ad_clicks) VALUES (?, 1, ?, 0) "+
-			"ON CONFLICT (stat_date) DO UPDATE SET visits = visits + 1, shares = shares + ?",
+			"ON CONFLICT (stat_date) DO UPDATE SET visits = visitor_stats.visits + 1, shares = visitor_stats.shares + ?",
 		day, shareIncr, shareIncr)
 	dbExecute(
-		"INSERT INTO stats_totals (k, v) VALUES ('total_visits', 1) ON CONFLICT (k) DO UPDATE SET v = v + 1")
+		"INSERT INTO stats_totals (k, v) VALUES ('total_visits', 1) ON CONFLICT (k) DO UPDATE SET v = stats_totals.v + 1")
 	if kind == "share" {
 		dbExecute(
-			"INSERT INTO stats_totals (k, v) VALUES ('total_shares', 1) ON CONFLICT (k) DO UPDATE SET v = v + 1")
+			"INSERT INTO stats_totals (k, v) VALUES ('total_shares', 1) ON CONFLICT (k) DO UPDATE SET v = stats_totals.v + 1")
 	}
 
 	if ip != "" {
@@ -53,10 +53,10 @@ func recordAdClick() {
 	day := todayStr()
 	dbExecute(
 		"INSERT INTO visitor_stats (stat_date, visits, shares, ad_clicks) VALUES (?, 0, 0, 1) "+
-			"ON CONFLICT (stat_date) DO UPDATE SET ad_clicks = ad_clicks + 1",
+			"ON CONFLICT (stat_date) DO UPDATE SET ad_clicks = visitor_stats.ad_clicks + 1",
 		day)
 	dbExecute(
-		"INSERT INTO stats_totals (k, v) VALUES ('total_ad_clicks', 1) ON CONFLICT (k) DO UPDATE SET v = v + 1")
+		"INSERT INTO stats_totals (k, v) VALUES ('total_ad_clicks', 1) ON CONFLICT (k) DO UPDATE SET v = stats_totals.v + 1")
 }
 
 // resetVisitorStats 清空选中的统计项（actions.php purge_stats）。

@@ -508,6 +508,13 @@ func dbExecute(query string, args ...any) int64 {
 	return n
 }
 
+// postgresHasID 表示哪些 PostgreSQL 表有 id 列（GENERATED ALWAYS AS IDENTITY）。
+// settings / shares / announcement_reads / gw_files 没有 id 列，不能用 RETURNING id。
+var postgresHasID = map[string]bool{
+	"users": true, "folders": true, "resources": true, "resource_links": true,
+	"gw_nodes": true, "access_log": true,
+}
+
 func dbInsert(table string, data map[string]any) int64 {
 	if db == nil {
 		log.Printf("dbInsert: 数据库未连接（未安装？）")
@@ -521,7 +528,13 @@ func dbInsert(table string, data map[string]any) int64 {
 		args[i] = data[c]
 	}
 	if dbDriverName == "postgres" {
-		// PG 无 LastInsertId，走 RETURNING
+		// PG 无 LastInsertId，走 RETURNING（仅对有 id 列的表）
+		if !postgresHasID[table] {
+			if _, err := db.Exec(adaptSQL(q), args...); err != nil {
+				log.Printf("dbInsert %s: %v", table, err)
+			}
+			return 0
+		}
 		var id int64
 		if err := db.QueryRow(adaptSQL(q+" RETURNING id"), args...).Scan(&id); err != nil {
 			log.Printf("dbInsert %s: %v", table, err)
@@ -555,5 +568,8 @@ func dbDelete(table, where string, args ...any) int64 {
 }
 
 func dbCount(table, where string, args ...any) int {
+	if where == "1" {
+		where = "true"
+	}
 	return dbFetchColumnInt("SELECT COUNT(*) AS c FROM \""+table+"\" WHERE "+where, args...)
 }
