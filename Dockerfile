@@ -3,16 +3,16 @@ FROM golang:1.22-alpine AS builder
 
 WORKDIR /app
 
-# 安装 git 和 gcc（SQLite 编译需要）
-RUN apk add --no-cache git gcc musl-dev
+# 安装 git（依赖下载需要）
+RUN apk add --no-cache git
 
 # 先复制依赖文件，利用 Docker 缓存
 COPY go.mod go.sum ./
 RUN go mod download
 
-# 复制源码并编译
+# 复制源码并编译（CGO_ENABLED=0 静态编译，无需 gcc）
 COPY . .
-RUN CGO_ENABLED=1 GOOS=linux go build -o /app/share-go -ldflags="-s -w" .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /app/share-go -ldflags="-s -w" .
 
 # 运行阶段
 FROM alpine:3.19
