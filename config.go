@@ -43,7 +43,7 @@ func defaultConfig() *Config {
 	return &Config{
 		SiteName:         "资源分享中心",
 		RouteSecret:      "",
-		Listen:           ":8080",
+		Listen:           ":61201",
 		LoginMaxAttempts: 5,
 		LoginLockMinutes: 15,
 	}
@@ -83,7 +83,7 @@ func loadConfig() (*Config, error) {
 		cfg.LoginLockMinutes = 15
 	}
 	if cfg.Listen == "" {
-		cfg.Listen = ":8080"
+		cfg.Listen = ":61201"
 	}
 	return cfg, nil
 }

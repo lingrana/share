@@ -29,7 +29,7 @@ COPY --from=builder /app/share-go /app/share-go
 RUN mkdir -p /app/data
 
 # 暴露端口
-EXPOSE 8080
+EXPOSE 61201
 
 # 环境变量
 ENV SHARE_DATA=/app/data
@@ -37,7 +37,7 @@ ENV TZ=Asia/Shanghai
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget -qO- http://localhost:8080/health || exit 1
+    CMD wget -qO- http://localhost:61201/health || exit 1
 
 # 启动
 CMD ["/app/share-go"]

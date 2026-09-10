@@ -108,7 +108,7 @@ func getClientIp(r *http.Request) string {
 		host = host[:i]
 	}
 	host = strings.Trim(host, "[]")
-	if strings.Contains(host, "]") { // [::1]:8080 形式
+	if strings.Contains(host, "]") { // [::1]:61201 形式
 		host = strings.Trim(strings.Split(host, "]")[0], "[")
 	}
 	return host
