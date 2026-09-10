@@ -1,0 +1,96 @@
+{{define "install"}}{{/* 首次安装：选择 SQLite / PostgreSQL */}}
+<header class="mono-nav">
+    <div class="nav-inner">
+        <a href="/index" class="nav-brand">
+            <img src="/assets/site-icon.png" alt="澪染" class="nav-brand-img">
+            澪染
+            <span class="nav-badge">初始化</span>
+        </a>
+        <div class="nav-actions">
+            <button type="button" class="theme-toggle-btn mono-btn mono-btn-sm">[ 🌙 深色 ]</button>
+        </div>
+    </div>
+</header>
+
+<div class="page-container" style="max-width:560px;margin-top:4rem">
+    <div style="border:2px solid var(--border);padding:3rem 2rem;background:var(--bg)">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;letter-spacing:0.15em;color:var(--muted-fg);margin-bottom:0.5rem">
+            首次安装部署
+        </div>
+        <h1 class="preview-headline" style="font-size:1.8rem;margin-bottom:0.5rem">选择站点数据库</h1>
+        <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:2rem">
+            SQLite 零配置、单文件、低占用，推荐个人站点；PostgreSQL 适合已有 PG 实例或需要更高并发的场景。选择后立即建库建表，并写入 data/config.json。
+        </p>
+
+        {{if .Flash}}
+            <div class="flash-bar" style="margin-bottom:1.5rem">
+                <span>[ {{.FlashType | upper}} ] {{.Flash}}</span>
+                <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-family:var(--font-mono)">[ ✕ ]</button>
+            </div>
+        {{end}}
+
+        <form method="post" action="/install">
+            <input type="hidden" name="action" value="install_db">
+            <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+
+            <div class="mono-form-group">
+                <label class="mono-form-label">数据库类型</label>
+                <label style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.8rem;border:2px solid var(--border);cursor:pointer;margin-bottom:0.6rem">
+                    <input type="radio" name="driver" value="sqlite" checked style="width:18px;height:18px;accent-color:var(--fg);margin-top:0.15rem" onchange="pickDriver('sqlite')">
+                    <span>
+                        <strong>SQLite</strong> <span class="mono-tag" style="font-size:0.7rem">推荐</span>
+                        <div style="font-size:0.78rem;color:var(--muted-fg);margin-top:0.3rem;font-family:var(--font-mono)">零配置，单文件 data/share.sqlite（WAL 模式），无需额外进程。</div>
+                    </span>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:0.6rem;padding:0.8rem;border:2px solid var(--border);cursor:pointer">
+                    <input type="radio" name="driver" value="postgres" style="width:18px;height:18px;accent-color:var(--fg);margin-top:0.15rem" onchange="pickDriver('postgres')">
+                    <span>
+                        <strong>PostgreSQL</strong>
+                        <div style="font-size:0.78rem;color:var(--muted-fg);margin-top:0.3rem;font-family:var(--font-mono)">需要可用的 PG 实例（连接信息需提前建好数据库）。</div>
+                    </span>
+                </label>
+            </div>
+
+            <div id="pgFields" style="display:none;border:1px dashed var(--border);padding:1.25rem;margin:1.25rem 0">
+                <div class="mono-form-group">
+                    <label class="mono-form-label">主机 *</label>
+                    <input type="text" name="host" class="mono-input" placeholder="例如 127.0.0.1" value="127.0.0.1">
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">端口</label>
+                    <input type="number" name="port" class="mono-input" value="5432" min="1" max="65535">
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">用户名 *</label>
+                    <input type="text" name="user" class="mono-input" placeholder="postgres" value="postgres">
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">密码</label>
+                    <input type="password" name="password" class="mono-input" placeholder="数据库密码" autocomplete="off">
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">数据库名 *</label>
+                    <input type="text" name="dbname" class="mono-input" placeholder="share" value="share">
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">SSL 模式</label>
+                    <select name="sslmode" class="mono-select">
+                        <option value="disable">disable（本机 / 内网）</option>
+                        <option value="require">require（加密不校验证书）</option>
+                        <option value="verify-full">verify-full（校验证书）</option>
+                    </select>
+                </div>
+                <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--muted-fg)">连接信息明文写入 data/config.json（权限 0600），请勿提交到版本库。</div>
+            </div>
+
+            <button type="submit" class="mono-btn mono-btn-filled mono-btn-lg" style="width:100%;margin-top:1rem">完成安装并初始化 →</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function pickDriver(v) {
+    document.getElementById('pgFields').style.display = (v === 'postgres') ? '' : 'none';
+}
+</script>
+{{end}}

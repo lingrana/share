@@ -1,0 +1,37 @@
+{{define "404"}}
+<header class="mono-nav">
+    <div class="nav-inner">
+        <a href="/index" class="nav-brand">
+            <img src="/assets/site-icon.png" alt="澪染" class="nav-brand-img">
+            澪染
+            <span class="nav-badge">404</span>
+        </a>
+        <div class="nav-actions">
+            <button type="button" class="theme-toggle-btn mono-btn mono-btn-sm">[ 🌙 深色 ]</button>
+            <a href="/index" class="mono-btn mono-btn-sm">返回首页</a>
+        </div>
+    </div>
+</header>
+
+<div class="page-container" style="max-width:540px">
+    {{with .SiteSettings}}
+    {{if .SocialLinks}}
+        <div class="mono-social-banner" style="margin-bottom:2rem;text-align:left">
+            <span class="mono-announcement-tag">社交媒体与交流群</span>
+            <div class="mono-social-banner-links">
+                {{range .SocialLinks}}
+                    <a href="{{.URL}}" target="_blank" rel="noopener">💬 {{.Name}} ↗</a>
+                {{end}}
+            </div>
+        </div>
+    {{end}}
+    {{end}}
+    <div style="border:4px solid var(--border);padding:4rem 2rem;background:var(--bg);text-align:center">
+        <div style="font-family:var(--font-mono);font-size:3.5rem;font-weight:900;line-height:1;margin-bottom:1rem">404</div>
+        <div style="font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.15em;color:var(--muted-fg);margin-bottom:1rem">PAGE NOT FOUND</div>
+        <h1 class="preview-headline" style="font-size:1.6rem;margin-bottom:1rem">页面未找到</h1>
+        <p style="font-size:0.9rem;color:var(--muted-fg);margin-bottom:2.5rem">您访问的页面、分类或资源项目已被移动、删除或失效。</p>
+        <a href="/index" class="mono-btn mono-btn-filled mono-btn-lg" style="width:100%">返回站点首页 →</a>
+    </div>
+</div>
+{{end}}

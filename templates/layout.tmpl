@@ -1,0 +1,18 @@
+{{define "layout.tmpl"}}<!DOCTYPE html>
+<html lang="zh-CN" data-theme="{{.ThemeID}}" data-mode="{{.ThemeMode}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {{if .CSRFToken}}<meta name="csrf" content="{{.CSRFToken}}">{{end}}
+    <title>{{.Title}}</title>
+    <link rel="icon" type="image/png" href="/assets/site-icon.png">
+    <link rel="stylesheet" href="{{asset "style.css"}}">
+    {{if .ThemeCSS}}<style id="custom-theme">
+{{.ThemeCSS}}
+</style>{{end}}
+</head>
+<body>
+{{.Content}}
+<script src="{{asset "app.js"}}"></script>
+</body>
+</html>{{end}}

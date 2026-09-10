@@ -1,0 +1,66 @@
+{{define "partials/ip_panel.tmpl"}}{{/* IP 明细面板（后台选项卡 + 独立统计页共用） */}}
+<div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+    <div class="section-header">
+        <h2 class="section-title">🌐 近期活跃 IP 访问分布明细</h2>
+        <span class="mono-tag" style="font-size:0.8rem">累计记录 {{.IPDetail.TotalIPs}} 个独立 IP</span>
+    </div>
+
+    <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:1.5rem;font-family:var(--font-mono)">
+        展示最近 7 天内访问站点的活跃 IP、活跃天数与下载次数：
+    </p>
+
+    {{if .IPDetail.IPKeys}}
+        <!-- 活跃 IP 标签墙 -->
+        <div style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-bottom:2.5rem">
+            {{range .IPDetail.IPKeys}}
+                {{$info := index $.IPDetail.ByIP .}}
+                <span class="mono-tag" style="padding:0.35rem 0.65rem;font-size:0.8rem;display:inline-flex;align-items:center;gap:0.4rem">
+                    <span>{{.}}</span>
+                    <strong style="background:var(--fg);color:var(--bg);padding:0.05rem 0.35rem;font-size:0.7rem">
+                        {{$info.ActiveDays}} 天活跃
+                    </strong>
+                    <strong style="border:1px solid var(--border);padding:0.05rem 0.35rem;font-size:0.7rem">
+                        {{$info.Downloads}} 次下载
+                    </strong>
+                </span>
+            {{end}}
+        </div>
+
+        <!-- IP 按天分布详细表格 -->
+        <div class="section-header" style="margin-top:2rem">
+            <h3 class="section-title">📅 每日独立访问 IP 列表</h3>
+        </div>
+        <div style="overflow-x:auto">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width:140px">日期</th>
+                        <th style="width:100px;text-align:right">独立 IP 数</th>
+                        <th>访问 IP 详情</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .IPDetail.DayKeys}}
+                        {{$day := index $.IPDetail.AllDays .}}
+                        <tr>
+                            <td style="font-weight:700">{{.}}</td>
+                            <td style="text-align:right;font-weight:700">{{len $day.IPList}}</td>
+                            <td>
+                                <div style="display:flex;flex-wrap:wrap;gap:0.3rem">
+                                    {{range $day.IPList}}
+                                        <span class="mono-tag" style="font-size:0.75rem">{{.}}</span>
+                                    {{end}}
+                                </div>
+                            </td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    {{else}}
+        <div style="border:1px dashed var(--border);padding:3rem 1rem;text-align:center">
+            <p style="font-family:var(--font-mono);color:var(--muted-fg)">暂无任何 IP 访问记录</p>
+        </div>
+    {{end}}
+</div>
+{{end}}

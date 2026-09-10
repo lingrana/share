@@ -1,0 +1,139 @@
+{{define "partials/stats_panel.tmpl"}}{{/* 流量统计面板（后台选项卡 + 独立统计页共用） */}}
+<div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+    <div class="section-header">
+        <h2 class="section-title">📊 流量与访问统计概览</h2>
+        <button type="button" class="mono-btn mono-btn-sm mono-btn-filled" onclick="openModal('clearStatsModal')">清空统计记录</button>
+    </div>
+
+    <!-- 反色统计指标面板 -->
+    <div class="mono-stats-section" style="margin-top:1.5rem">
+        <div class="mono-stats-grid">
+            <div>
+                <div class="stat-val">{{numfmt .Stats.TodayVisits}}</div>
+                <div class="stat-lbl">今日访问 (PV)</div>
+            </div>
+            <div>
+                <div class="stat-val">{{numfmt .Stats.TotalVisits}}</div>
+                <div class="stat-lbl">总访问量 (PV)</div>
+            </div>
+            <div>
+                <div class="stat-val">{{numfmt .Stats.TodayUniqueIPs}}</div>
+                <div class="stat-lbl">今日独立访客 (UV)</div>
+            </div>
+            <div>
+                <div class="stat-val">{{numfmt .Stats.TotalUniqueIPs}}</div>
+                <div class="stat-lbl">累计独立访客 (UV)</div>
+            </div>
+            <div>
+                <div class="stat-val">{{numfmt .Stats.TodayDownloads}}</div>
+                <div class="stat-lbl">今日下载次数</div>
+            </div>
+            <div>
+                <div class="stat-val">{{numfmt .Stats.TotalDownloads}}</div>
+                <div class="stat-lbl">累计下载次数</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 近 7 天明细表格 -->
+    <div class="section-header" style="margin-top:2.5rem">
+        <h3 class="section-title">📅 近 7 天访问趋势明细</h3>
+    </div>
+    <div style="overflow-x:auto">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th style="text-align:right">页面访问 (PV)</th>
+                    <th style="text-align:right">独立访客 (UV)</th>
+                    <th style="text-align:right">下载点击</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Stats.RecentKeys}}
+                    {{$day := index $.Stats.RecentDays .}}
+                    <tr>
+                        <td style="font-weight:700">{{.}}</td>
+                        <td style="text-align:right">{{numfmt $day.Visits}}</td>
+                        <td style="text-align:right;font-weight:700">{{numfmt $day.Ips}}</td>
+                        <td style="text-align:right">{{numfmt $day.Downloads}}</td>
+                    </tr>
+                {{end}}
+                {{if not .Stats.RecentKeys}}
+                    <tr><td colspan="4" style="text-align:center;color:var(--muted-fg);padding:2rem">暂无流量统计记录</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 模态框: 自定义选择清除历史统计数据 -->
+    <div class="modal-overlay" id="clearStatsModal">
+        <div class="modal-sheet" style="max-width:480px">
+            <button type="button" class="modal-close-x" onclick="closeModal()">✕</button>
+            <h3 class="modal-title">🗑️ 选择要清除的历史记录</h3>
+            <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:1.25rem;font-family:var(--font-mono)">
+                请勾选您希望清除的具体统计项（未勾选的项目将保留）：
+            </p>
+            <form method="post" onsubmit="return validateClearStatsForm(this);">
+                <input type="hidden" name="action" value="purge_stats">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;font-family:var(--font-mono);font-size:0.85rem">
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.6rem;border:1px solid var(--border)">
+                        <input type="checkbox" name="clear_targets[]" value="today_visits" checked>
+                        <span><strong>今日访问量</strong> (今日 PV)</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.6rem;border:1px solid var(--border)">
+                        <input type="checkbox" name="clear_targets[]" value="total_visits" checked>
+                        <span><strong>总访问量</strong> (累计 PV)</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.6rem;border:1px solid var(--border)">
+                        <input type="checkbox" name="clear_targets[]" value="today_uv" checked>
+                        <span><strong>今日独立访客</strong> (今日 UV)</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.6rem;border:1px solid var(--border)">
+                        <input type="checkbox" name="clear_targets[]" value="total_uv" checked>
+                        <span><strong>累计独立访客</strong> (累计 UV)</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.6rem;border:1px solid var(--border)">
+                        <input type="checkbox" name="clear_targets[]" value="today_downloads" checked>
+                        <span><strong>今日下载次数</strong></span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;padding:0.6rem;border:1px solid var(--border)">
+                        <input type="checkbox" name="clear_targets[]" value="total_downloads" checked>
+                        <span><strong>累计下载次数</strong></span>
+                    </label>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+                    <div style="display:flex;gap:0.5rem">
+                        <button type="button" class="mono-btn mono-btn-sm" onclick="toggleAllClearTargets(true)">全选</button>
+                        <button type="button" class="mono-btn mono-btn-sm" onclick="toggleAllClearTargets(false)">全不选</button>
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem">
+                    <button type="button" class="mono-btn" onclick="closeModal()">取消</button>
+                    <button type="submit" class="mono-btn mono-btn-filled">确认清除选中项</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function toggleAllClearTargets(checked) {
+        document.querySelectorAll('#clearStatsModal input[name="clear_targets[]"]').forEach(cb => {
+            cb.checked = checked;
+        });
+    }
+    function validateClearStatsForm(form) {
+        const checked = form.querySelectorAll('input[name="clear_targets[]"]:checked');
+        if (checked.length === 0) {
+            alert('请至少选择一项要清除的记录！');
+            return false;
+        }
+        return confirm('确定清除选中的 ' + checked.length + ' 项历史统计记录吗？此操作不可恢复！');
+    }
+    </script>
+</div>
+{{end}}

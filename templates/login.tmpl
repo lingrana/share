@@ -1,0 +1,52 @@
+{{define "login"}}
+<header class="mono-nav">
+    <div class="nav-inner">
+        <a href="/index" class="nav-brand">
+            <img src="/assets/site-icon.png" alt="澪染" class="nav-brand-img">
+            澪染
+            <span class="nav-badge">登录</span>
+        </a>
+        <div class="nav-actions">
+            <button type="button" class="theme-toggle-btn mono-btn mono-btn-sm">[ 🌙 深色 ]</button>
+            <a href="/index" class="mono-btn mono-btn-sm">返回首页</a>
+        </div>
+    </div>
+</header>
+
+<div class="page-container" style="max-width:480px;margin-top:4rem">
+    <div style="border:2px solid var(--border);padding:3rem 2rem;background:var(--bg)">
+        <div style="font-family:var(--font-mono);font-size:0.75rem;letter-spacing:0.15em;color:var(--muted-fg);margin-bottom:0.5rem">
+            安全验证 · 管理员通道
+        </div>
+        <h1 class="preview-headline" style="font-size:1.8rem;margin-bottom:0.5rem">管理控制台登录</h1>
+        <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:2rem">
+            请输入您的管理员账号与密码进入控制面板。
+        </p>
+
+        {{if .Flash}}
+            <div class="flash-bar" style="margin-bottom:1.5rem">
+                <span>[ {{.FlashType | upper}} ] {{.Flash}}</span>
+                <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-family:var(--font-mono)">[ ✕ ]</button>
+            </div>
+        {{end}}
+
+        <form method="post">
+            <input type="hidden" name="action" value="login">
+            <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+            <div class="mono-form-group">
+                <label class="mono-form-label">管理员账号</label>
+                <input type="text" name="username" class="mono-input" placeholder="输入管理员用户名" required autofocus>
+            </div>
+            <div class="mono-form-group">
+                <label class="mono-form-label">管理密码</label>
+                <input type="password" name="password" class="mono-input" placeholder="输入密码" required>
+            </div>
+            <button type="submit" class="mono-btn mono-btn-filled mono-btn-lg" style="width:100%;margin-top:1rem">立即登录 →</button>
+        </form>
+
+        <div style="text-align:center;margin-top:2rem;font-family:var(--font-mono);font-size:0.75rem">
+            <a href="/index" style="color:var(--muted-fg)">← 返回站点首页</a>
+        </div>
+    </div>
+</div>
+{{end}}

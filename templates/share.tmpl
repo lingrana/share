@@ -1,0 +1,204 @@
+{{define "share"}}{{/* 分享页：提取码门 → 资源详情 → 下载表格 */}}{{$ss := .SiteSettings}}{{$flash := .Flash}}{{$flashType := .FlashType}}
+<header class="mono-nav">
+    <div class="nav-inner">
+        <a href="/index" class="nav-brand">
+            <img src="/assets/site-icon.png" alt="澪染" class="nav-brand-img">
+            澪染
+            <span class="nav-badge">专属分享</span>
+        </a>
+        <div class="nav-actions">
+            <button type="button" class="theme-toggle-btn mono-btn mono-btn-sm">[ 🌙 深色 ]</button>
+            <a href="/index" class="mono-btn mono-btn-sm">首页</a>
+        </div>
+    </div>
+</header>
+
+<div class="page-container" style="max-width:840px">
+
+    {{if $flash}}
+        <div class="flash-bar">
+            <span>[ {{$flashType | upper}} ] {{$flash}}</span>
+            <button type="button" onclick="this.parentElement.remove()" style="cursor:pointer">[ ✕ ]</button>
+        </div>
+    {{end}}
+
+    {{if $ss.SocialLinks}}
+        <div class="mono-social-banner">
+            <span class="mono-announcement-tag">社交媒体与交流群</span>
+            <div class="mono-social-banner-links">
+                {{range $ss.SocialLinks}}
+                    <a href="{{.URL}}" target="_blank" rel="noopener">💬 {{.Name}} ↗</a>
+                {{end}}
+            </div>
+        </div>
+    {{end}}
+
+    {{if not .Unlocked}}
+        <!-- 密码保护界面 (黑白画报极简风) -->
+        <div style="border:4px solid var(--border);padding:4rem 2rem;background:var(--bg);text-align:center;margin-top:4rem">
+            <div style="font-family:var(--font-mono);letter-spacing:0.15em;font-size:0.85rem;color:var(--muted-fg);margin-bottom:1rem">
+                受保护的内容 · 需要提取密码
+            </div>
+            <h1 style="font-size:2.2rem;font-weight:900;margin-bottom:1rem">
+                请输入专属提取密码
+            </h1>
+            <p style="color:var(--muted-fg);max-width:480px;margin:0 auto 2.5rem">
+                该分享链接已设置访问保护，请输入口令密码以解锁资源内容。
+            </p>
+
+            <form method="post" style="max-width:380px;margin:0 auto">
+                <input type="hidden" name="action" value="unlock_share">
+                <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+                <input type="hidden" name="share_token" value="{{.Token}}">
+                <div class="mono-form-group">
+                    <input type="text" name="share_code" class="mono-input" placeholder="输入提取口令 / 密码" style="text-align:center;font-family:var(--font-mono);letter-spacing:0.15em;font-weight:700" required autofocus>
+                </div>
+                <button type="submit" class="mono-btn mono-btn-filled mono-btn-lg" style="width:100%">立即解锁资源 →</button>
+            </form>
+        </div>
+
+    {{else if .Resource}}
+        {{$res := .Resource}}{{$share := .Share}}
+        <!-- 解锁成功，展示资源详情 -->
+        <article style="border:2px solid var(--border);padding:3rem 2.5rem;background:var(--bg);margin-top:2rem">
+            <header class="preview-header">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem">
+                    <span class="mono-tag" style="background:var(--fg);color:var(--bg)">专属授权分享</span>
+                    {{if $share.expires_at}}
+                        <span class="mono-tag">有效期至: {{$share.expires_at}}</span>
+                    {{else}}
+                        <span class="mono-tag">永久有效</span>
+                    {{end}}
+                </div>
+
+                <h1 class="preview-headline">{{$res.title}}</h1>
+                <div class="preview-meta-row">
+                    <span>分类 // <strong>{{typelbl $res.resource_type}}</strong></span>
+                    <span>生成日期 // <strong>{{date10 $share.created_at}}</strong></span>
+                </div>
+            </header>
+
+            {{$mediaURL := $res.media_url}}
+            {{if and (eq $res.resource_type "audio") $mediaURL}}
+                <div style="border:2px solid var(--border);padding:1.5rem;margin-bottom:2.5rem">
+                    <audio controls preload="metadata" style="width:100%">
+                        <source src="{{$mediaURL}}">
+                    </audio>
+                </div>
+            {{else if and (eq $res.resource_type "video") $mediaURL}}
+                <div style="border:2px solid var(--border);margin-bottom:2.5rem">
+                    <video controls preload="metadata" style="width:100%;display:block">
+                        <source src="{{$mediaURL}}">
+                    </video>
+                </div>
+            {{else if and (eq $res.resource_type "document") $mediaURL}}
+                {{$doc := docMediaView $mediaURL}}
+                <div style="border:2px solid var(--border);margin-bottom:2.5rem;overflow:hidden">
+                    {{if eq $doc.Kind "text"}}
+                        <pre style="white-space:pre-wrap;padding:1.5rem;margin:0;font-family:var(--font-mono);font-size:0.9rem">{{$doc.Payload}}</pre>
+                    {{else if eq $doc.Kind "image"}}
+                        <img src="{{$doc.Payload}}" alt="{{$res.title}}" loading="lazy" decoding="async" style="width:100%">
+                    {{else}}
+                        <div style="padding:1.5rem;text-align:center">
+                            <a class="mono-btn" href="{{$doc.Payload}}" target="_blank" rel="noopener">📄 打开 / 下载完整文档</a>
+                        </div>
+                    {{end}}
+                </div>
+            {{else if and (eq $res.resource_type "image") $mediaURL}}
+                <div style="border:2px solid var(--border);margin-bottom:2.5rem;overflow:hidden">
+                    <img src="{{$mediaURL}}" alt="{{$res.title}}" decoding="async" style="width:100%">
+                </div>
+            {{else if $res.cover_url}}
+                <div style="border:2px solid var(--border);margin-bottom:2.5rem;overflow:hidden">
+                    <img src="{{$res.cover_url}}" alt="{{$res.title}}" loading="lazy" decoding="async" style="width:100%">
+                </div>
+            {{end}}
+
+            {{if $res.tags}}
+                <div class="resource-tags-wrap" style="margin-bottom:2rem">
+                    {{range splitTags $res.tags}}
+                        {{if .}}<span class="mono-tag">{{.}}</span>{{end}}
+                    {{end}}
+                </div>
+            {{end}}
+
+            {{if $res.description}}
+                <div class="drop-cap" style="font-size:1.15rem;line-height:1.8;margin-bottom:3rem;color:var(--fg);white-space:pre-wrap">
+                    {{$res.description}}
+                </div>
+            {{end}}
+
+            <!-- 下载表格 -->
+            <div style="margin-top:3rem">
+                <div class="section-header">
+                    <h2 class="section-title">📥 资源下载渠道与提取口令</h2>
+                </div>
+
+                {{if .Links}}
+                    <table class="link-download-table">
+                        <thead>
+                            <tr>
+                                <th>网盘平台</th>
+                                <th>提取码 / 解压密码</th>
+                                <th style="text-align:right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .Links}}
+                                {{$platKey := index . "platform"}}{{$linkID := index . "id"}}
+                                <tr>
+                                    <td>
+                                        <strong>[ {{plat $platKey}} ]</strong>
+                                    </td>
+                                    <td>
+                                        {{if index . "code"}}
+                                            <span class="mono-tag" style="cursor:pointer" {{jsCopyAttr (index . "code") "提取码已复制"}}>
+                                                提取码: <strong>{{index . "code"}}</strong> [点击复制]
+                                            </span>
+                                        {{end}}
+                                        {{if and (eq $platKey "other") (index . "password")}}
+                                            <span class="mono-tag" style="cursor:pointer;margin-left:0.5rem" {{jsCopyAttr (index . "password") "解压密码已复制"}}>
+                                                解压密码: <strong>{{index . "password"}}</strong> [点击复制]
+                                            </span>
+                                        {{end}}
+                                        {{if and (not (index . "code")) (or (ne $platKey "other") (not (index . "password")))}}
+                                            <span style="color:var(--muted-fg)">直链高速访问 (免密码)</span>
+                                        {{end}}
+                                    </td>
+                                    <td style="text-align:right">
+                                        <a href="/link/{{$linkID}}"
+                                           target="_blank"
+                                           class="mono-btn mono-btn-sm mono-btn-filled"
+                                           {{if index . "code"}}{{jsWriteAttr (index . "code")}}{{end}}>
+                                            前往下载 ↗
+                                        </a>
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                {{else}}
+                    <div style="border:1px dashed var(--border);padding:2rem;text-align:center;font-family:var(--font-mono)">
+                        暂无下载渠道
+                    </div>
+                {{end}}
+            </div>
+        </article>
+
+    {{else}}
+        <div style="border:2px dashed var(--border);padding:5rem 2rem;text-align:center;margin-top:3rem">
+            <p style="font-family:var(--font-mono);letter-spacing:0.1em;color:var(--muted-fg)">该分享链接已失效或已被撤销</p>
+            <a href="/index" class="mono-btn mono-btn-filled" style="margin-top:1.5rem">返回站点首页</a>
+        </div>
+    {{end}}
+</div>
+
+<footer class="mono-footer">
+    <div class="footer-inner">
+        <div>
+            © 澪染 · lingran
+        </div>
+        <span class="footer-clock">--:--:--</span>
+    </div>
+</footer>
+{{end}}

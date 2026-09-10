@@ -1,0 +1,163 @@
+{{define "home_public"}}{{/* 前台：搜索 + 社交 + 面包屑 + 目录网格 + 资源网格 + 公告弹窗 */}}{{$ss := .SiteSettings}}{{$flash := .Flash}}{{$flashType := .FlashType}}
+<header class="mono-nav">
+    <div class="nav-inner">
+        <a href="/index" class="nav-brand">
+            <img src="/assets/site-icon.png" alt="澪染" class="nav-brand-img">
+            澪染
+            <span class="nav-badge">首页</span>
+        </a>
+        <div class="nav-actions">
+            <button type="button" class="theme-toggle-btn mono-btn mono-btn-sm">[ 🌙 深色 ]</button>
+        </div>
+    </div>
+</header>
+
+<div class="page-container">
+
+    {{if $flash}}
+        <div class="flash-bar">
+            <span>[ {{$flashType | upper}} ] {{$flash}}</span>
+            <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-family:var(--font-mono)">[ ✕ ]</button>
+        </div>
+    {{end}}
+
+    <!-- 顶部搜索区 -->
+    <div class="hero-editorial">
+        <div class="mono-search-wrap">
+            <form method="get" action="/index" class="mono-search-box">
+                <input type="text" name="q" class="mono-search-input" placeholder="搜索资源名称、关键词或标签..." value="{{.Search}}">
+                <button type="submit" class="mono-search-btn">立即搜索</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 社交媒体与交流群 -->
+    {{if $ss.SocialLinks}}
+        <div class="mono-social-banner">
+            <span class="mono-announcement-tag">社交媒体与交流群</span>
+            <div class="mono-social-banner-links">
+                {{range $ss.SocialLinks}}
+                    <a href="{{.URL}}" target="_blank" rel="noopener">💬 {{.Name}} ↗</a>
+                {{end}}
+            </div>
+        </div>
+    {{end}}
+
+    <!-- 面包屑导航 -->
+    {{if not .Search}}
+        <div class="mono-breadcrumb">
+            <a href="/index">全部资源</a>
+            {{range .Breadcrumbs}}
+                <span class="sep">/</span>
+                <a href="/folder/{{.ID}}">{{.Name}}</a>
+            {{end}}
+        </div>
+    {{else}}
+        <div class="mono-breadcrumb">
+            <span>搜索关键词：“<strong>{{.Search}}</strong>” (匹配共 {{.Resources.Total}} 项)</span>
+            <span class="sep">/</span>
+            <a href="/index">返回全部资源</a>
+        </div>
+    {{end}}
+
+    <!-- 分类目录网格（超过 4 个时横向滚动 + 左右箭头） -->
+    {{if .SubFolders}}
+        {{$scroller := gt (len .SubFolders) 4}}
+        <div class="section-header">
+            <h2 class="section-title">📁 分类专区</h2>
+        </div>
+        {{if $scroller}}<div class="folder-scroller"><button type="button" class="folder-nav-btn folder-nav-prev" aria-label="向左滚动">&lt;</button>{{end}}
+        <div class="folder-grid">
+            {{range .SubFolders}}
+                <a href="/folder/{{index . "id"}}" class="folder-card">
+                    <div class="folder-card-meta">分类 // {{index $.FolderCounts (index . "id") | default 0}} 个资源</div>
+                    <div class="folder-card-name">{{index . "name"}}</div>
+                </a>
+            {{end}}
+        </div>
+        {{if $scroller}}<button type="button" class="folder-nav-btn folder-nav-next" aria-label="向右滚动">&gt;</button></div>{{end}}
+    {{end}}
+
+    <!-- 精选资源网格 -->
+    <div class="section-header">
+        <h2 class="section-title">✨ 精选资源项目</h2>
+    </div>
+
+    {{if .Resources.Items}}
+        <div class="resource-grid" data-cols="{{$ss.GridColumns}}">
+            {{range .Resources.Items}}
+                <a href="/resource/{{index . "id"}}" class="resource-card">
+                    <div class="resource-cover-box">
+                        {{if index . "cover_url"}}
+                            <img src="{{index . "cover_url"}}" alt="{{index . "title"}}" loading="lazy" decoding="async" class="resource-cover-img">
+                        {{else}}
+                            <span style="font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.1em;color:var(--muted-fg)">[ 暂无封面图 ]</span>
+                        {{end}}
+                        <span class="resource-type-tag">{{typelbl (index . "resource_type")}}</span>
+                    </div>
+
+                    <div class="resource-body">
+                        <h3 class="resource-title">{{index . "title"}}</h3>
+                        <p class="resource-desc">{{if index . "description"}}{{index . "description"}}{{else}}暂无详细描述介绍。{{end}}</p>
+
+                        {{if index . "tags"}}
+                            <div class="resource-tags-wrap">
+                                {{range splitTags (index . "tags")}}
+                                    {{if .}}<span class="mono-tag">{{.}}</span>{{end}}
+                                {{end}}
+                            </div>
+                        {{end}}
+
+                        <div class="resource-footer-meta">
+                            <span>浏览 // {{index . "view_count"}} 次</span>
+                            <span>{{date10 (index . "created_at")}}</span>
+                        </div>
+                    </div>
+                </a>
+            {{end}}
+        </div>
+
+        <!-- 分页系统 -->
+        {{if gt .Resources.Pages 1}}
+            <div class="mono-pagination">
+                {{$folderID := .CurrentFolderID}}{{$search := .Search}}
+                {{range $p := seq .Resources.Pages}}
+                    <a href="?{{if gt $folderID 0}}folder={{$folderID}}&{{end}}{{if $search}}q={{$search}}&{{end}}page={{$p}}"
+                       class="mono-page-btn {{if eq $p $.Resources.Page}}active{{end}}">
+                        {{$p}}
+                    </a>
+                {{end}}
+            </div>
+        {{end}}
+
+    {{else if not .SubFolders}}
+        <div style="border:2px dashed var(--border);text-align:center;padding:5rem 1rem;margin-bottom:3rem">
+            <p style="font-family:var(--font-mono);letter-spacing:0.1em;color:var(--muted-fg)">当前分类下暂无相关资源</p>
+        </div>
+    {{end}}
+
+    <!-- 全站通知弹窗 -->
+    {{if and $ss.Announcement .ShowAnnouncement}}
+        <div class="modal-overlay is-open" id="announcementModal">
+            <div class="modal-sheet" style="max-width:520px">
+                <button type="button" class="modal-close-x" onclick="closeAnnouncementModal()">✕</button>
+                <h3 class="modal-title">📢 全站通知</h3>
+                <div class="announcement-modal-body">{{$ss.Announcement | safe}}</div>
+                <div style="display:flex;justify-content:flex-end;margin-top:1.5rem">
+                    <button type="button" class="mono-btn mono-btn-filled" onclick="closeAnnouncementModal()">我知道了</button>
+                </div>
+            </div>
+        </div>
+    {{end}}
+</div>
+
+<!-- 底部版权与社交渠道 -->
+<footer class="mono-footer">
+    <div class="footer-inner">
+        <div>
+            © 澪染 · lingran
+        </div>
+        <span id="footer-clock" class="footer-clock">--:--:--</span>
+    </div>
+</footer>
+{{end}}

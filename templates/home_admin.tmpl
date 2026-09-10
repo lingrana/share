@@ -1,0 +1,947 @@
+{{define "home_admin"}}{{/* 后台管理面板：6 选项卡 + 模态框 */}}{{$ss := .SiteSettings}}{{$flash := .Flash}}{{$flashType := .FlashType}}{{$csrf := .CSRFToken}}{{$currentFolderID := .CurrentFolderID}}
+<header class="mono-nav">
+    <div class="nav-inner">
+        <a href="/admin" class="nav-brand">
+            <img src="/assets/site-icon.png" alt="澪染" class="nav-brand-img">
+            澪染
+            <span class="nav-badge">控制台</span>
+        </a>
+        <div class="nav-actions">
+            <button type="button" class="theme-toggle-btn mono-btn mono-btn-sm">[ 🌙 深色 ]</button>
+            <a href="/index" class="mono-btn mono-btn-sm" target="_blank">预览前台 ↗</a>
+            <form method="post" style="display:inline;margin:0">
+                <input type="hidden" name="action" value="logout">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <button type="submit" class="mono-btn mono-btn-sm mono-btn-filled">退出登录</button>
+            </form>
+        </div>
+    </div>
+</header>
+
+<div class="page-container">
+
+    {{if $flash}}
+        <div class="flash-bar">
+            <span>[ {{$flashType | upper}} ] {{$flash}}</span>
+            <button type="button" onclick="this.parentElement.remove()" style="background:none;border:none;color:inherit;cursor:pointer;font-family:var(--font-mono)">[ ✕ ]</button>
+        </div>
+    {{end}}
+
+    <!-- 顶部选项卡 -->
+    <div class="admin-tabs-nav">
+        <button type="button" class="admin-tab-btn active" data-tab-target="files">📁 资源与目录</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="shares">🔗 独立分享口令</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="stats">📊 流量数据统计</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="ips">🌐 IP 访问明细</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="announcement">📢 全局广播公告</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="themes">🎨 前台主题</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="gateway">🗄️ 存储网关</button>
+        <button type="button" class="admin-tab-btn" data-tab-target="settings">⚙️ 站点配置</button>
+    </div>
+
+    <!-- 选项卡 1: 资源管理 -->
+    <div data-tab-panel="files">
+        {{if .EditingResource}}
+            {{$res := .EditingResource}}
+            <!-- 编辑资源 -->
+            <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;border-bottom:2px solid var(--border);padding-bottom:1rem">
+                    <h2 class="section-title" style="margin:0">✏️ 编辑资源：{{$res.title}}</h2>
+                    <a href="/admin{{if $res.folder_id}}?folder={{$res.folder_id}}{{end}}" class="mono-btn mono-btn-sm">← 返回目录</a>
+                </div>
+
+                <form method="post" class="js-once-form" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="update_resource">
+                    <input type="hidden" name="csrf" value="{{$csrf}}">
+                    <input type="hidden" name="resource_id" value="{{$res.id}}">
+
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">资源标题 *</label>
+                        <input type="text" name="title" class="mono-input" value="{{$res.title}}" required>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+                        <div class="mono-form-group">
+                            <label class="mono-form-label">所属目录</label>
+                            <select name="folder_id" class="mono-select">
+                                <option value="0">根目录 (/)</option>
+                                {{range .Folders}}
+                                    <option value="{{.id}}" {{if eq (index $res "folder_id") .id}}selected{{end}}>{{.path}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                        <div class="mono-form-group">
+                            <label class="mono-form-label">资源分类</label>
+                            <select name="resource_type" class="mono-select js-resource-type">
+                                {{range $k, $v := resTypes}}
+                                    <option value="{{$k}}" {{if eq $res.resource_type $k}}selected{{end}}>{{$v}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">封面缩略图 (可选)</label>
+                        {{if $res.cover_url}}
+                            <div style="margin-bottom:0.75rem">
+                                <img src="{{$res.cover_url}}" alt="" style="width:160px;height:104px;object-fit:cover;border:1px solid var(--border);display:block">
+                            </div>
+                        {{end}}
+                        <div class="mono-cover-combo">
+                            <label class="mono-cover-combo-btn">
+                                <span>选择文件</span>
+                                <input type="file" name="cover_file" class="js-cover-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+                            </label>
+                            <input type="text" name="cover_url" class="mono-cover-combo-input js-cover-url-input" placeholder="填写封面 URL 或点击左侧选择图片" value="{{if not (hasPrefix $res.cover_url "/assets/covers/")}}{{$res.cover_url}}{{end}}">
+                        </div>
+                        <input type="hidden" name="cover_url_current" value="{{$res.cover_url}}">
+                        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted-fg);margin-top:0.4rem">统一保存为 SVG 缩略图（仅此一种，存放本站）。</div>
+                    </div>
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">完整内容 (可选：上传文件或粘贴存储池外链)</label>
+                        {{if $res.media_url}}
+                            <div style="font-family:var(--font-mono);font-size:0.75rem;margin-bottom:0.4rem">当前: {{$res.media_url}}</div>
+                        {{end}}
+                        <div class="mono-cover-combo">
+                            <label class="mono-cover-combo-btn">
+                                <span>选择文件</span>
+                                <input type="file" name="media_file" class="js-media-file-input" style="display:none">
+                            </label>
+                            <input type="text" name="media_url" class="mono-cover-combo-input js-media-url-input" placeholder="留空保持不变；或粘贴 https://…/content/m1.mp3 外链" value="">
+                        </div>
+                        <label style="display:flex;align-items:center;gap:0.5rem;margin-top:0.5rem;font-size:0.8rem;color:var(--muted-fg);cursor:pointer">
+                            <input type="checkbox" name="media_url_clear" value="1" style="width:16px;height:16px;accent-color:var(--fg)"> 清空完整内容（预览/分享页将只显示缩略图）
+                        </label>
+                        <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted-fg);margin-top:0.4rem">上传需先在 ⚙️ 设置 → 存储网关 填写网关 origin 与站点 API Token。文件以 m&lt;id&gt;.&lt;ext&gt; 存入网关，公开地址为网关返回的 /content/{file_id}。仅 图片/文档/音频/视频 分类会展示完整内容，选文件后自动切换分类。</div>
+                    </div>
+
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">标签 (逗号分隔)</label>
+                        <input type="text" name="tags" class="mono-input" value="{{$res.tags}}" placeholder="软件, 工具, 教程">
+                    </div>
+
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">详细介绍</label>
+                        <textarea name="description" class="mono-textarea" rows="4">{{$res.description}}</textarea>
+                    </div>
+
+                    <div class="mono-form-group" style="display:flex;align-items:center;gap:0.75rem">
+                        <input type="checkbox" id="resEnabled" name="enabled" value="1" style="width:18px;height:18px;accent-color:var(--fg)" {{if $res.enabled}}checked{{end}}>
+                        <label for="resEnabled" class="mono-form-label" style="margin:0;cursor:pointer">在前台公开展示此资源</label>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin:2.5rem 0 1rem;border-bottom:1px solid var(--border);padding-bottom:0.5rem">
+                        <h3 class="section-title" style="margin:0;font-size:1.1rem">📥 下载地址与提取口令</h3>
+                        <button type="button" class="mono-btn mono-btn-sm" onclick="addNewLinkRow('editLinks')">+ 添加下载渠道</button>
+                    </div>
+
+                    <div id="editLinks" style="margin-bottom:2rem">
+                        {{range .EditingLinks}}
+                            {{$link := .}}
+                            <div class="link-input-row" style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:center;flex-wrap:wrap">
+                                <select name="link_platform[]" class="mono-select" style="width:140px">
+                                    {{range $pk, $pv := platformConfig}}
+                                        <option value="{{$pk}}" {{if eq $link.platform $pk}}selected{{end}}>{{$pv.Name}}</option>
+                                    {{end}}
+                                </select>
+                                <input type="text" name="link_url[]" class="mono-input js-link-url" value="{{$link.url}}" placeholder="粘贴分享口令或链接" style="flex:2;min-width:180px" required>
+                                <input type="text" name="link_code[]" class="mono-input js-link-code" value="{{$link.code}}" placeholder="提取码" style="flex:1;min-width:80px">
+                                <input type="text" name="link_password[]" class="mono-input js-link-password" value="{{$link.password}}" placeholder="解压密码" style="flex:1;min-width:80px;{{if ne $link.platform "other"}}display:none{{end}}">
+                                <button type="button" class="mono-btn mono-btn-sm" onclick="this.closest('.link-input-row').remove()">[ ✕ ]</button>
+                            </div>
+                        {{end}}
+                    </div>
+
+                    <div style="display:flex;gap:1rem;margin-top:2rem">
+                        <button type="submit" class="mono-btn mono-btn-filled js-once-submit">保存修改内容</button>
+                        <a href="/admin{{if $res.folder_id}}?folder={{$res.folder_id}}{{end}}" class="mono-btn">取消</a>
+                    </div>
+                </form>
+            </div>
+
+        {{else}}
+            <!-- 资源管理器面板 -->
+            <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+                <!-- 面包屑导航 -->
+                <div class="mono-breadcrumb" style="margin-top:0">
+                    <a href="/admin">根目录</a>
+                    {{range .Breadcrumbs}}
+                        <span class="sep">/</span>
+                        <a href="/admin?folder={{.ID}}">{{.Name}}</a>
+                    {{end}}
+                </div>
+
+                <!-- 顶层操作条 -->
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.5rem 0 2rem">
+                    <form method="get" style="display:flex;border:1px solid var(--border);flex:1;max-width:380px">
+                        {{if gt $currentFolderID 0}}<input type="hidden" name="folder" value="{{$currentFolderID}}">{{end}}
+                        <input type="text" name="q" class="mono-input" placeholder="在当前目录搜索资源..." value="{{.Search}}" style="border:none">
+                        <button type="submit" class="mono-search-btn" style="padding:0 1rem;font-size:0.75rem">搜索</button>
+                    </form>
+                    <div style="display:flex;gap:0.75rem">
+                        <button type="button" class="mono-btn" onclick="openModal('folderModal')">+ 新建子文件夹</button>
+                        <button type="button" class="mono-btn mono-btn-filled" onclick="openModal('resourceModal')">+ 新建资源</button>
+                    </div>
+                </div>
+
+                <!-- 子目录网格（超过 4 个时横向滚动 + 左右箭头） -->
+                {{if .SubFolders}}
+                    {{$scroller := gt (len .SubFolders) 4}}
+                    <div class="section-header">
+                        <h3 class="section-title">📁 子分类文件夹 ({{len .SubFolders}})</h3>
+                    </div>
+                    {{if $scroller}}<div class="folder-scroller"><button type="button" class="folder-nav-btn folder-nav-prev" aria-label="向左滚动">&lt;</button>{{end}}
+                    <div class="folder-grid">
+                        {{range .SubFolders}}
+                            <div class="folder-card">
+                                <a href="/admin?folder={{index . "id"}}" style="text-decoration:none">
+                                    <div class="folder-card-meta">目录 // {{index $.FolderCounts (index . "id") | default 0}} 个项目</div>
+                                    <div class="folder-card-name">{{index . "name"}}</div>
+                                </a>
+                                <form method="post" onsubmit="return confirm('确定彻底删除该分类目录及其所有包含内容吗？')" style="margin-top:1rem;text-align:right">
+                                    <input type="hidden" name="action" value="delete_folder">
+                                    <input type="hidden" name="csrf" value="{{$csrf}}">
+                                    <input type="hidden" name="folder_id" value="{{index . "id"}}">
+                                    <button type="submit" class="mono-btn mono-btn-sm" style="font-size:0.7rem;padding:0.2rem 0.5rem">删除目录</button>
+                                </form>
+                            </div>
+                        {{end}}
+                    </div>
+                    {{if $scroller}}<button type="button" class="folder-nav-btn folder-nav-next" aria-label="向右滚动">&gt;</button></div>{{end}}
+                {{end}}
+
+                <!-- 资源列表表格 -->
+                <div class="section-header" style="margin-top:2.5rem">
+                    <h3 class="section-title">📄 资源项目列表 (共 {{.Resources.Total}} 项)</h3>
+                </div>
+
+                {{if .Resources.Items}}
+                    <div style="overflow-x:auto">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>封面</th>
+                                    <th>资源名称</th>
+                                    <th>分类</th>
+                                    <th>浏览量</th>
+                                    <th>发布时间</th>
+                                    <th>状态</th>
+                                    <th style="text-align:right">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range .Resources.Items}}
+                                    {{$rid := index . "id"}}{{$rtitle := index . "title"}}
+                                    <tr>
+                                        <td>
+                                            {{if index . "cover_url"}}
+                                                <img src="{{index . "cover_url"}}" alt="" style="width:48px;height:32px;object-fit:cover;border-radius:4px;display:block">
+                                            {{else}}
+                                                <div style="width:48px;height:32px;background:var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:14px">📦</div>
+                                            {{end}}
+                                        </td>
+                                        <td>
+                                            <strong style="font-size:0.95rem"><a href="/resource/{{$rid}}" target="_blank">{{$rtitle}} ↗</a></strong>
+                                            {{if index . "tags"}}
+                                                <div style="font-size:0.7rem;color:var(--muted-fg);margin-top:2px">{{index . "tags"}}</div>
+                                            {{end}}
+                                        </td>
+                                        <td><span class="mono-tag">{{typelbl (index . "resource_type")}}</span></td>
+                                        <td><strong>{{index . "view_count"}}</strong></td>
+                                        <td style="font-size:0.75rem;color:var(--muted-fg)">{{date10 (index . "created_at")}}</td>
+                                        <td>
+                                            {{if index . "enabled"}}<span style="font-weight:700">[ 正常公开 ]</span>{{else}}<span style="color:var(--muted-fg)">[ 已隐藏 ]</span>{{end}}
+                                        </td>
+                                        <td style="text-align:right">
+                                            <div style="display:inline-flex;gap:0.3rem">
+                                                <button type="button" class="mono-btn mono-btn-sm" data-share-id="{{$rid}}" data-share-title="{{$rtitle}}" onclick="openShareModal(this)">分享</button>
+                                                <button type="button" class="mono-btn mono-btn-sm" data-move-id="{{$rid}}" data-move-title="{{$rtitle}}" onclick="openMoveModal(this)">移动</button>
+                                                <a href="/admin?resource={{$rid}}" class="mono-btn mono-btn-sm">编辑</a>
+                                                <button type="button" class="mono-btn mono-btn-sm" onclick="postAction('toggle_resource',{resource_id:{{$rid}}})">{{if index . "enabled"}}隐藏{{else}}显示{{end}}</button>
+                                                <button type="button" class="mono-btn mono-btn-sm" onclick="if(confirm('确定将该资源浏览量清零？'))postAction('reset_views',{resource_id:{{$rid}}})">清零</button>
+                                                <button type="button" class="mono-btn mono-btn-sm" onclick="if(confirm('确定彻底删除该资源吗？'))postAction('delete_resource',{resource_id:{{$rid}}})">删除</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {{end}}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {{if gt .Resources.Pages 1}}
+                        <div class="mono-pagination">
+                            {{range $p := seq .Resources.Pages}}
+                                <a href="?folder={{$currentFolderID}}&page={{$p}}" class="mono-page-btn {{if eq $p $.Resources.Page}}active{{end}}">
+                                    {{$p}}
+                                </a>
+                            {{end}}
+                        </div>
+                    {{end}}
+
+                {{else}}
+                    <div style="text-align:center;padding:3rem 1rem;border:1px dashed var(--border);margin-top:1rem">
+                        <p style="font-family:var(--font-mono);color:var(--muted-fg)">当前目录下暂无资源项目</p>
+                    </div>
+                {{end}}
+            </div>
+        {{end}}
+    </div>
+
+    <!-- 选项卡 2: 分享口令管理 -->
+    <div data-tab-panel="shares" style="display:none">
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+            <div class="section-header">
+                <h2 class="section-title">🔗 独立分享链接与提取码</h2>
+            </div>
+            {{if .AllShares}}
+                <div style="overflow-x:auto">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>分享标题</th>
+                                <th>专属访问链接</th>
+                                <th>提取码</th>
+                                <th>有效期</th>
+                                <th>状态</th>
+                                <th style="text-align:right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .AllShares}}
+                                <tr>
+                                    <td><strong>{{index . "title"}}</strong></td>
+                                    <td><a href="/share/{{index . "token"}}" target="_blank" style="text-decoration:underline">/share/{{index . "token"}} ↗</a></td>
+                                    <td>{{if index . "code"}}<span class="mono-tag">{{index . "code"}}</span>{{else}}<span style="color:var(--muted-fg)">免密码</span>{{end}}</td>
+                                    <td>{{if index . "expires_at"}}{{index . "expires_at"}}{{else}}永久有效{{end}}</td>
+                                    <td>{{if index . "enabled"}}<span style="font-weight:700">[ 正常 ]</span>{{else}}<span style="color:var(--muted-fg)">[ 已禁用 ]</span>{{end}}</td>
+                                    <td style="text-align:right">
+                                        <div style="display:inline-flex;gap:0.3rem">
+                                            <button type="button" class="mono-btn mono-btn-sm" onclick="copyText(window.location.origin + '/share/{{index . "token"}}', '分享链接已复制')">复制链接</button>
+                                            <form method="post" style="display:inline;margin:0">
+                                                <input type="hidden" name="action" value="toggle_share">
+                                                <input type="hidden" name="csrf" value="{{$csrf}}">
+                                                <input type="hidden" name="share_token" value="{{index . "token"}}">
+                                                <button type="submit" class="mono-btn mono-btn-sm">{{if index . "enabled"}}禁用{{else}}启用{{end}}</button>
+                                            </form>
+                                            <form method="post" onsubmit="return confirm('确定彻底删除该分享口令吗？')" style="display:inline;margin:0">
+                                                <input type="hidden" name="action" value="delete_share">
+                                                <input type="hidden" name="csrf" value="{{$csrf}}">
+                                                <input type="hidden" name="share_token" value="{{index . "token"}}">
+                                                <button type="submit" class="mono-btn mono-btn-sm mono-btn-filled">删除</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div style="text-align:center;padding:3rem 1rem;border:1px dashed var(--border)">
+                    <p style="font-family:var(--font-mono);color:var(--muted-fg)">暂无任何独立分享口令</p>
+                </div>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- 选项卡 3: 流量统计 -->
+    <div data-tab-panel="stats" style="display:none">
+        {{template "partials/stats_panel.tmpl" .}}
+    </div>
+
+    <!-- 选项卡 4: 独立 IP 明细 -->
+    <div data-tab-panel="ips" style="display:none">
+        {{template "partials/ip_panel.tmpl" .}}
+    </div>
+
+    <!-- 选项卡 5: 全局公告配置 -->
+    <div data-tab-panel="announcement" style="display:none">
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+            <div class="section-header">
+                <h2 class="section-title">📢 前台全局公告广播</h2>
+            </div>
+            <form method="post">
+                <input type="hidden" name="action" value="update_announcement">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <div class="mono-form-group">
+                    <label class="mono-form-label">公告内容 (支持富文本与 HTML 标签)</label>
+                    <textarea name="announcement" class="mono-textarea" rows="6" placeholder="输入全站通知公告内容...">{{$ss.Announcement}}</textarea>
+                </div>
+                <div class="mono-form-group" style="max-width:320px">
+                    <label class="mono-form-label">弹出频率控制 (每隔几天向已读用户再次弹出)</label>
+                    <select name="announcement_interval_days" class="mono-select">
+                        {{$curDays := $ss.AnnouncementIntervalDays}}
+                        <option value="0" {{if eq $curDays 0}}selected{{end}}>每次访问都弹出 (0 天)</option>
+                        <option value="1" {{if eq $curDays 1}}selected{{end}}>每隔 1 天弹出一次 (默认)</option>
+                        <option value="3" {{if eq $curDays 3}}selected{{end}}>每隔 3 天弹出一次</option>
+                        <option value="7" {{if eq $curDays 7}}selected{{end}}>每隔 7 天弹出一次</option>
+                        <option value="30" {{if eq $curDays 30}}selected{{end}}>每隔 30 天弹出一次</option>
+                    </select>
+                </div>
+                <button type="submit" class="mono-btn mono-btn-filled" style="margin-top:1rem">保存并发布公告</button>
+            </form>
+
+            <!-- 已读 IP 记录与强制弹出管理 -->
+            <div class="section-header" style="margin-top:3rem">
+                <h3 class="section-title">👁️ 已读 IP 统计明细 (近 100 条)</h3>
+            </div>
+            {{$readIps := .ReadIps}}
+            {{if $readIps}}
+                <div style="overflow-x:auto">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>访客 IP</th>
+                                <th>最后确认已读时间</th>
+                                <th>下次访问策略</th>
+                                <th style="text-align:right">管理操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range $readIps}}
+                                <tr>
+                                    <td><strong>{{index . "ip"}}</strong></td>
+                                    <td>{{index . "read_at"}}</td>
+                                    <td>
+                                        {{if index . "force_popup"}}
+                                            <span style="color:#d9534f;font-weight:700">[ ⚡ 下次访问强制再次弹出 ]</span>
+                                        {{else}}
+                                            <span style="color:var(--muted-fg)">按周期弹出 (正常)</span>
+                                        {{end}}
+                                    </td>
+                                    <td style="text-align:right">
+                                        <div style="display:inline-flex;gap:0.4rem">
+                                            {{if not (index . "force_popup")}}
+                                                <form method="post" style="display:inline;margin:0">
+                                                    <input type="hidden" name="action" value="force_announcement_ip">
+                                                    <input type="hidden" name="csrf" value="{{$csrf}}">
+                                                    <input type="hidden" name="ip" value="{{index . "ip"}}">
+                                                    <button type="submit" class="mono-btn mono-btn-sm mono-btn-filled">再次弹出</button>
+                                                </form>
+                                            {{end}}
+                                            <form method="post" onsubmit="return confirm('确定重置该 IP 的已读记录吗？')" style="display:inline;margin:0">
+                                                <input type="hidden" name="action" value="delete_announcement_ip">
+                                                <input type="hidden" name="csrf" value="{{$csrf}}">
+                                                <input type="hidden" name="ip" value="{{index . "ip"}}">
+                                                <button type="submit" class="mono-btn mono-btn-sm">重置已读</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div style="text-align:center;padding:2rem 1rem;border:1px dashed var(--border);margin-top:1rem">
+                    <p style="font-family:var(--font-mono);color:var(--muted-fg)">暂无访客已读记录</p>
+                </div>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- 选项卡 6: 站点与推广配置 -->
+    <div data-tab-panel="themes" style="display:none">
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)" id="themes">
+            <div class="section-header">
+                <h2 class="section-title">🎨 前台主题</h2>
+            </div>
+            <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:1.5rem;line-height:1.7">
+                选择前台（公开页面）使用的主题；每个主题自带浅色 / 暗色两个变体，访客可用导航栏按钮切换明暗（记忆在自己浏览器里）。
+                本控制台固定使用默认主题，不受切换影响。主题切换立即生效，分享页缓存自动失效。
+                自定义主题以 zip 压缩包导入（可换配色，也可改布局/组件样式），规范见 <span class="mono-tag">go/docs/THEMES.md</span>。
+            </p>
+
+            <form method="post" style="margin-bottom:2rem">
+                <input type="hidden" name="action" value="update_theme">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <div class="mono-form-group">
+                    <label class="mono-form-label">当前生效主题</label>
+                    <select name="theme_id" class="mono-select" style="max-width:420px">
+                        {{$active := .ActiveThemeID}}
+                        {{range .BuiltinThemes}}
+                            <option value="{{.ID}}" {{if eq $active .ID}}selected{{end}}>{{.Name}}{{if eq .ID "mono"}}（默认）{{end}}</option>
+                        {{end}}
+                        {{range .CustomThemes}}
+                            <option value="{{.ID}}" {{if eq $active .ID}}selected{{end}}>{{.Name}} · 自定义</option>
+                        {{end}}
+                    </select>
+                </div>
+                <button type="submit" class="mono-btn mono-btn-filled">应用主题</button>
+            </form>
+
+            <div class="section-header" style="margin-top:2.5rem">
+                <h3 class="section-title">📥 导入自定义主题（压缩包）</h3>
+            </div>
+            <p style="font-size:0.82rem;color:var(--muted-fg);margin-bottom:1.25rem;line-height:1.7">
+                包结构：<span class="mono-tag">theme.css</span> 必须（≤32KB，可含变量/布局/组件覆盖），
+                <span class="mono-tag">theme.json</span> 可选（{"name": "主题名", "description": "说明"}）；
+                缺 theme.json 时用 zip 文件名做主题名。包 ≤2MB。详见 <span class="mono-tag">go/docs/THEMES.md</span>。
+            </p>
+            <form method="post" enctype="multipart/form-data" style="max-width:720px">
+                <input type="hidden" name="action" value="import_theme">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <div class="mono-form-group">
+                    <label class="mono-form-label">主题压缩包 (.zip) *</label>
+                    <input type="file" name="theme_zip" accept=".zip" class="mono-input" required>
+                </div>
+                <button type="submit" class="mono-btn mono-btn-filled">导入主题包</button>
+            </form>
+
+            {{if .CustomThemes}}
+                <div class="section-header" style="margin-top:2.5rem">
+                    <h3 class="section-title">🗂️ 已导入的自定义主题 ({{len .CustomThemes}})</h3>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>主题 ID（data-theme 值）</th>
+                                <th>体积</th>
+                                <th style="text-align:right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .CustomThemes}}
+                                <tr>
+                                    <td><strong>{{.Name}}</strong></td>
+                                    <td><span class="mono-tag">{{.ID}}</span></td>
+                                    <td>{{len .CSS}} 字节</td>
+                                    <td style="text-align:right">
+                                        <form method="post" onsubmit="return confirm('确定删除该主题吗？若正在使用将回落默认黑白主题。')" style="display:inline;margin:0">
+                                            <input type="hidden" name="action" value="delete_theme">
+                                            <input type="hidden" name="csrf" value="{{$csrf}}">
+                                            <input type="hidden" name="theme_id" value="{{.ID}}">
+                                            <button type="submit" class="mono-btn mono-btn-sm mono-btn-filled">删除</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div style="border:1px dashed var(--border);padding:1.5rem;text-align:center;margin-top:1.5rem">
+                    <p style="font-family:var(--font-mono);color:var(--muted-fg)">尚未导入自定义主题</p>
+                </div>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- 选项卡 7: 存储网关 -->
+    <div data-tab-panel="gateway" style="display:none">
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)" id="gateway">
+            <div class="section-header">
+                <h2 class="section-title">🗄️ 存储网关</h2>
+            </div>
+            <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:1.5rem;line-height:1.7">
+                公开外链统一为 <span class="mono-tag">/content/{file_id}</span>，节点真实地址不对外暴露、下载请求带 HMAC 时效签名。
+            </p>
+
+            <!-- 容量汇总 -->
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem;font-family:var(--font-mono);font-size:0.82rem">
+                <div style="border:1px solid var(--border);padding:0.75rem 1.25rem">
+                    文件索引 <strong>{{.GwSummary.FileCount}}</strong> 个 · 占用 {{.GwSummary.UsedStr}}
+                </div>
+                <div style="border:1px solid var(--border);padding:0.75rem 1.25rem">
+                    本地存储 {{if .GwSummary.LocalEnabled}}✅ 开启{{else}}⏸️ 关闭{{end}} · 剩余 {{.GwSummary.LocalFreeStr}}
+                </div>
+                <div style="border:1px solid var(--border);padding:0.75rem 1.25rem">
+                    启用节点 {{.GwSummary.NodeCount}} 个 · 剩余 {{.GwSummary.NodeFreeStr}} / {{.GwSummary.NodeTotalStr}}
+                </div>
+            </div>
+
+            <!-- 添加/编辑节点 -->
+            <div class="section-header">
+                <h3 class="section-title">{{if .GwEditing}}✏️ 编辑节点「{{.GwEditing.Name}}」{{else}}➕ 添加节点{{end}}</h3>
+            </div>
+            <form method="post" style="max-width:960px;margin-bottom:1rem">
+                <input type="hidden" name="action" value="gw_save_node">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <input type="hidden" name="node_id" value="{{if .GwEditing}}{{.GwEditing.ID}}{{else}}0{{end}}">
+                <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:1rem">
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">节点名称 *</label>
+                        <input type="text" name="node_name" class="mono-input" value="{{if .GwEditing}}{{.GwEditing.Name}}{{end}}" placeholder="如 n1" required>
+                    </div>
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">节点地址 (origin) *</label>
+                        <input type="text" name="node_base_url" class="mono-input" value="{{if .GwEditing}}{{.GwEditing.BaseURL}}{{end}}" placeholder="https://n1.example.com" required>
+                    </div>
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">Token *</label>
+                        <input type="text" name="node_token" class="mono-input" value="{{if .GwEditing}}{{.GwEditing.Token}}{{end}}" placeholder="与节点后台 token 一致" required>
+                    </div>
+                </div>
+                <label style="display:flex;gap:0.5rem;align-items:center;font-size:0.85rem;margin-bottom:1rem">
+                    <input type="checkbox" name="node_anti_bot" value="1" {{if .GwEditing}}{{if .GwEditing.AntiBot}}checked{{end}}{{end}}>
+                    该主机带反爬 JS 质询（InfinityFree / VimHost 类），自动求解通行 cookie
+                </label>
+                <button type="submit" class="mono-btn mono-btn-filled">{{if .GwEditing}}保存节点{{else}}添加节点{{end}}</button>
+                {{if .GwEditing}}<a href="/admin#gateway" class="mono-btn" style="margin-left:0.5rem">取消编辑</a>{{end}}
+            </form>
+
+            <!-- 节点列表 -->
+            <div class="section-header">
+                <h3 class="section-title">🖥️ 存储节点 ({{len .GwNodeViews}})</h3>
+            </div>
+            {{if .GwNodeViews}}
+                <div style="overflow-x:auto">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>名称</th>
+                                <th>地址</th>
+                                <th>状态</th>
+                                <th>剩余 / 总量</th>
+                                <th>已用</th>
+                                <th>最后在线</th>
+                                <th style="text-align:right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .GwNodeViews}}
+                                <tr>
+                                    <td><strong>{{.Name}}</strong>{{if .AntiBot}} <span class="mono-tag">反爬</span>{{end}}</td>
+                                    <td style="font-family:var(--font-mono);font-size:0.72rem">{{.BaseURL}}</td>
+                                    <td>{{if .Enabled}}✅ 启用{{else}}⏸️ 停用{{end}}</td>
+                                    <td>{{.FreeStr}} / {{.TotalStr}}</td>
+                                    <td>{{.UsedStr}}</td>
+                                    <td>{{.LastSeen}}</td>
+                                    <td style="text-align:right;white-space:nowrap">
+                                        <form method="post" style="display:inline;margin:0">
+                                            <input type="hidden" name="action" value="gw_test_node">
+                                            <input type="hidden" name="csrf" value="{{$csrf}}">
+                                            <input type="hidden" name="node_id" value="{{.ID}}">
+                                            <button type="submit" class="mono-btn mono-btn-sm">测试</button>
+                                        </form>
+                                        <form method="post" style="display:inline;margin:0">
+                                            <input type="hidden" name="action" value="gw_toggle_node">
+                                            <input type="hidden" name="csrf" value="{{$csrf}}">
+                                            <input type="hidden" name="node_id" value="{{.ID}}">
+                                            <button type="submit" class="mono-btn mono-btn-sm">{{if .Enabled}}停用{{else}}启用{{end}}</button>
+                                        </form>
+                                        <a class="mono-btn mono-btn-sm" href="/admin?gw_edit={{.ID}}#gateway">编辑</a>
+                                        <form method="post" style="display:inline;margin:0" onsubmit="return confirm('确定删除该节点吗？其上的既有文件将不再被索引。')">
+                                            <input type="hidden" name="action" value="gw_delete_node">
+                                            <input type="hidden" name="csrf" value="{{$csrf}}">
+                                            <input type="hidden" name="node_id" value="{{.ID}}">
+                                            <button type="submit" class="mono-btn mono-btn-sm mono-btn-filled">删除</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+                <form method="post" style="margin:1rem 0 0">
+                    <input type="hidden" name="action" value="gw_refresh_nodes">
+                    <input type="hidden" name="csrf" value="{{$csrf}}">
+                    <button type="submit" class="mono-btn mono-btn-sm">🔄 刷新全部节点容量</button>
+                </form>
+            {{else}}
+                <div style="border:1px dashed var(--border);padding:1.5rem;text-align:center;margin-bottom:1rem">
+                    <p style="font-family:var(--font-mono);color:var(--muted-fg)">尚未添加存储节点；未启用本地存储时上传会提示无可用存储目标</p>
+                </div>
+            {{end}}
+
+            <!-- 文件索引 -->
+            <div class="section-header" style="margin-top:2.5rem">
+                <h3 class="section-title">🗂️ 文件索引（最新 100 条）</h3>
+            </div>
+            {{if .GwFileViews}}
+                <div style="overflow-x:auto">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>file_key</th>
+                                <th>原始文件名</th>
+                                <th>存储位置</th>
+                                <th>大小</th>
+                                <th>MIME</th>
+                                <th>入库时间</th>
+                                <th style="text-align:right">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range .GwFileViews}}
+                                <tr>
+                                    <td style="font-family:var(--font-mono);font-size:0.72rem">{{.Key}}</td>
+                                    <td>{{.OrigName}}</td>
+                                    <td>{{.NodeName}}</td>
+                                    <td>{{.SizeStr}}</td>
+                                    <td style="font-family:var(--font-mono);font-size:0.72rem">{{.Mime}}</td>
+                                    <td>{{.CreatedAt}}</td>
+                                    <td style="text-align:right">
+                                        <form method="post" style="display:inline;margin:0" onsubmit="return confirm('确定删除该文件吗？节点/本地上的文件本体与索引会一并删除。')">
+                                            <input type="hidden" name="action" value="gw_delete_file">
+                                            <input type="hidden" name="csrf" value="{{$csrf}}">
+                                            <input type="hidden" name="file_key" value="{{.Key}}">
+                                            <button type="submit" class="mono-btn mono-btn-sm mono-btn-filled">删除</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            {{else}}
+                <div style="border:1px dashed var(--border);padding:1.5rem;text-align:center">
+                    <p style="font-family:var(--font-mono);color:var(--muted-fg)">暂无文件；上传资源「完整内容」后此处会出现索引</p>
+                </div>
+            {{end}}
+        </div>
+    </div>
+
+    <div data-tab-panel="settings" style="display:none">
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg)">
+            <div class="section-header">
+                <h2 class="section-title">⚙️ 站点设置</h2>
+            </div>
+            <form method="post">
+                <input type="hidden" name="action" value="update_site_content">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+
+                <h3 class="section-title" style="font-size:1.05rem;margin:1.5rem 0 1rem">💬 社交媒体与交流群</h3>
+                <div id="socialLinksEditor" style="margin-bottom:1rem">
+                    {{range $ss.SocialLinks}}
+                        <div class="social-link-row" style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:center">
+                            <input type="text" name="social_name[]" class="mono-input" value="{{.Name}}" placeholder="名称" style="width:160px" required>
+                            <input type="text" name="social_url[]" class="mono-input" value="{{.URL}}" placeholder="链接网址 (https://...)" style="flex:1" required>
+                            <button type="button" class="mono-btn mono-btn-sm" onclick="this.closest('.social-link-row').remove()">[ ✕ ]</button>
+                        </div>
+                    {{end}}
+                </div>
+                <button type="button" class="mono-btn mono-btn-sm" onclick="addSocialRow()" style="margin-bottom:2.5rem">+ 添加社交渠道</button>
+
+                <h3 class="section-title" style="font-size:1.05rem;margin:1.5rem 0 1rem">✨ 精选资源每行显示数量</h3>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">一行显示几个资源卡片</label>
+                    <select name="grid_columns" class="mono-select">
+                        <option value="3" {{if eq $ss.GridColumns 3}}selected{{end}}>3 个</option>
+                        <option value="4" {{if eq $ss.GridColumns 4}}selected{{end}}>4 个</option>
+                        <option value="5" {{if eq $ss.GridColumns 5}}selected{{end}}>5 个</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="mono-btn mono-btn-filled" style="margin-top:1.5rem">保存配置</button>
+            </form>
+        </div>
+
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg);margin-top:2rem">
+            <div class="section-header">
+                <h2 class="section-title">🔑 管理员账号</h2>
+            </div>
+            <p style="font-size:0.85rem;color:var(--muted-fg);margin-bottom:1.25rem;line-height:1.7">
+                修改管理员用户名或重置登录密码。设置页需先验证当前密码，防止借用已登录浏览器的人改动账号。
+            </p>
+            <a href="/set-password" class="mono-btn mono-btn-filled">重置密码 →</a>
+        </div>
+
+        <div style="border:2px solid var(--border);padding:2rem;background:var(--bg);margin-top:2rem">
+            <div class="section-header">
+                <h2 class="section-title">🗄️ 数据库</h2>
+            </div>
+            <p style="font-family:var(--font-mono);font-size:0.85rem;color:var(--muted-fg);line-height:1.8">
+                当前驱动：{{if eq .DBDriver "postgres"}}PostgreSQL{{else}}SQLite{{end}}<br>
+                {{if eq .DBDriver "postgres"}}连接：{{.DBHost}}:{{.DBPort}}/{{.DBName}}{{else}}文件：data/share.sqlite（WAL）{{end}}<br>
+                切换数据库需修改 data/config.json 的 db 键或删除后重装；本面板不提供在线切换。
+            </p>
+        </div>
+    </div>
+
+    <!-- 模态框: 新建文件夹 -->
+    <div class="modal-overlay" id="folderModal">
+        <div class="modal-sheet" style="max-width:480px">
+            <button type="button" class="modal-close-x" onclick="closeModal()">✕</button>
+            <h3 class="modal-title">📁 新建分类文件夹</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="create_folder">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <input type="hidden" name="parent_id" value="{{$currentFolderID}}">
+                <div class="mono-form-group">
+                    <label class="mono-form-label">文件夹名称</label>
+                    <input type="text" name="folder_name" class="mono-input" placeholder="例如: 实用工具箱" required autofocus>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem">
+                    <button type="button" class="mono-btn" onclick="closeModal()">取消</button>
+                    <button type="submit" class="mono-btn mono-btn-filled">立即创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 模态框: 新建资源 -->
+    <div class="modal-overlay" id="resourceModal">
+        <div class="modal-sheet">
+            <button type="button" class="modal-close-x" onclick="closeModal()">✕</button>
+            <h3 class="modal-title">✨ 新建资源项目</h3>
+            <form method="post" class="js-once-form" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="create_resource">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <input type="hidden" name="folder_id" value="{{$currentFolderID}}">
+
+                <div class="mono-form-group">
+                    <label class="mono-form-label">资源标题 *</label>
+                    <input type="text" name="title" class="mono-input" placeholder="输入资源完整名称" required>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">资源分类</label>
+                        <select name="resource_type" class="mono-select js-resource-type">
+                            <option value="video">🎬 视频</option>
+                            <option value="document">📄 文档</option>
+                            <option value="audio">🎵 音频</option>
+                            <option value="image">🖼️ 图片</option>
+                            <option value="other">📦 其他</option>
+                        </select>
+                    </div>
+                    <div class="mono-form-group">
+                        <label class="mono-form-label">封面缩略图 (可选)</label>
+                        <div class="mono-cover-combo">
+                            <label class="mono-cover-combo-btn">
+                                <span>选择文件</span>
+                                <input type="file" name="cover_file" class="js-cover-file-input" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none">
+                            </label>
+                            <input type="text" name="cover_url" class="mono-cover-combo-input js-cover-url-input" placeholder="填写封面 URL 或点击左侧选择图片">
+                        </div>
+                    </div>
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">完整内容 (可选：上传文件或粘贴存储池外链)</label>
+                    <div class="mono-cover-combo">
+                        <label class="mono-cover-combo-btn">
+                            <span>选择文件</span>
+                            <input type="file" name="media_file" class="js-media-file-input" style="display:none">
+                        </label>
+                        <input type="text" name="media_url" class="mono-cover-combo-input js-media-url-input" placeholder="音频/视频/文档/图片均可；留空则前台显示缩略图">
+                    </div>
+                    <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted-fg);margin-top:0.4rem">上传需先在 ⚙️ 设置 → 存储网关 配置（上传名 = 资源标题）。小文件走 POST /files，大文件按网关 /stats 分片。公开地址使用网关返回的 /content/{file_id}。也可直接粘贴该外链。</div>
+                </div>
+
+                <div class="mono-form-group">
+                    <label class="mono-form-label">标签</label>
+                    <input type="text" name="tags" class="mono-input" placeholder="软件, 设计, 教程 (以逗号隔开)">
+                </div>
+
+                <div class="mono-form-group">
+                    <label class="mono-form-label">详细介绍</label>
+                    <textarea name="description" class="mono-textarea" rows="3" placeholder="资源说明与详细介绍..."></textarea>
+                </div>
+
+                <div style="display:flex;justify-content:space-between;align-items:center;margin:1.5rem 0 0.75rem;border-bottom:1px solid var(--border);padding-bottom:0.4rem">
+                    <h4 class="section-title" style="font-size:1rem;margin:0">📥 下载渠道配置</h4>
+                    <button type="button" class="mono-btn mono-btn-sm" onclick="addNewLinkRow('newLinks')">+ 添加渠道</button>
+                </div>
+                <div id="newLinks" style="margin-bottom:1.5rem">
+                    <div class="link-input-row" style="display:flex;gap:0.5rem;margin-bottom:0.75rem;align-items:center;flex-wrap:wrap">
+                        <select name="link_platform[]" class="mono-select" style="width:140px">
+                            <option value="baidu">百度网盘</option>
+                            <option value="quark">夸克网盘</option>
+                            <option value="aliyun">阿里云盘</option>
+                            <option value="lanzou">蓝奏云</option>
+                            <option value="115">115网盘</option>
+                            <option value="other">其他外链</option>
+                        </select>
+                        <input type="text" name="link_url[]" class="mono-input js-link-url" placeholder="粘贴分享口令或链接" style="flex:2;min-width:180px">
+                        <input type="text" name="link_code[]" class="mono-input js-link-code" placeholder="提取码" style="flex:1;min-width:80px">
+                        <input type="text" name="link_password[]" class="mono-input js-link-password" placeholder="解压密码" style="flex:1;min-width:80px;display:none">
+                    </div>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem">
+                    <button type="button" class="mono-btn" onclick="closeModal()">取消</button>
+                    <button type="submit" class="mono-btn mono-btn-filled js-once-submit">立即创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 模态框: 移动资源到其他目录 -->
+    <div class="modal-overlay" id="moveModal">
+        <div class="modal-sheet" style="max-width:440px">
+            <button type="button" class="modal-close-x" onclick="closeModal()">✕</button>
+            <h3 class="modal-title">📦 移动资源</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="move_resource">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <input type="hidden" name="resource_id" id="moveResourceId" value="">
+                <div class="mono-form-group">
+                    <label class="mono-form-label">资源</label>
+                    <div id="moveResourceTitle" style="font-family:var(--font-serif);font-weight:700;overflow-wrap:anywhere"></div>
+                </div>
+                <div class="mono-form-group">
+                    <label class="mono-form-label">目标文件夹</label>
+                    <select name="folder_id" class="mono-select" required>
+                        <option value="0">根目录 (/)</option>
+                        {{range .Folders}}
+                            <option value="{{.id}}">{{.path}}</option>
+                        {{end}}
+                    </select>
+                </div>
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem">
+                    <button type="button" class="mono-btn" onclick="closeModal()">取消</button>
+                    <button type="submit" class="mono-btn mono-btn-filled">移动到该目录</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 模态框: 生成独立分享口令 -->
+    <div class="modal-overlay" id="shareCreateModal">
+        <div class="modal-sheet" style="max-width:500px">
+            <button type="button" class="modal-close-x" onclick="closeModal()">✕</button>
+            <h3 class="modal-title">🔗 生成独立分享口令</h3>
+            <form method="post">
+                <input type="hidden" name="action" value="create_share">
+                <input type="hidden" name="csrf" value="{{$csrf}}">
+                <input type="hidden" name="resource_id" id="modalShareResourceId" value="">
+
+                <div class="mono-form-group">
+                    <label class="mono-form-label">分享标题</label>
+                    <input type="text" name="share_title" id="modalShareTitle" class="mono-input" required>
+                </div>
+
+                <div class="mono-form-group">
+                    <label class="mono-form-label">提取密码 (留空则免密公开访问)</label>
+                    <input type="text" name="share_code" class="mono-input" placeholder="例如: 8888">
+                </div>
+
+                <div class="mono-form-group">
+                    <label class="mono-form-label">有效期</label>
+                    <select name="share_expires" class="mono-select">
+                        <option value="">永久有效</option>
+                        <option value="7days">7 天有效</option>
+                        <option value="30days">30 天有效</option>
+                    </select>
+                </div>
+
+                <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:1.5rem">
+                    <button type="button" class="mono-btn" onclick="closeModal()">取消</button>
+                    <button type="submit" class="mono-btn mono-btn-filled">生成专属链接</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+    function openShareModal(btn) {
+        document.getElementById('modalShareResourceId').value = btn.dataset.shareId;
+        document.getElementById('modalShareTitle').value = btn.dataset.shareTitle;
+        openModal('shareCreateModal');
+    }
+    </script>
+</div>
+
+<!-- 底部版权与社交渠道 -->
+<footer class="mono-footer">
+    <div class="footer-inner">
+        <div>
+            © 澪染 · lingran
+        </div>
+        <span id="footer-clock" class="footer-clock">--:--:--</span>
+    </div>
+</footer>
+{{end}}

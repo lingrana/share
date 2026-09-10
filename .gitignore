@@ -1,0 +1,39 @@
+# 数据目录（包含数据库、配置、用户上传文件）
+data/
+
+# 编译产物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+share-go-linux
+share.exe
+
+# 测试二进制
+*.test
+
+# Go 工作区
+/go.work
+/go.work.sum
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 环境变量（包含密钥）
+.env
+.env.*
+
+# 日志
+*.log
+
+# 临时文件
+tmp/
