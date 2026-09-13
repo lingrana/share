@@ -38,3 +38,9 @@ Thumbs.db
 
 # 临时文件
 tmp/
+
+# Claude Code
+.claude/
+
+# 自定义主题（用户私有）
+theme/

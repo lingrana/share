@@ -41,7 +41,7 @@ var (
 	themeNameRe = regexp.MustCompile(`^[\p{Han}\p{L}0-9 _·\-]{1,40}$`)
 	// CSS 白名单：字母数字、空白（\s 含换行制表）与 #.{}:,:%()'"*/[]-_>@!+~^|=。
 	// 拦截反斜杠（\9 hack、字符串逃逸）与 <、&（HTML 上下文逃逸）。
-	themeCSSRe = regexp.MustCompile(`^[\w\s#.,:;()'"{}*/\[\]\-_>@!+~^|=]*$`)
+	themeCSSRe = regexp.MustCompile(`^[\w\s#.,:;%()'"{}*/\[\]\-_>@!+~^|=]*$`)
 )
 
 // builtinThemes 内置主题清单（CSS 附在 assets/style.css 的 data-theme 块中）。
